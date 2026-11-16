@@ -1,0 +1,18 @@
+name = "firmacredenciales"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# No se usa en el despliegue por panel, pero permite `wrangler deploy`
+# si en el futuro se instala Node.js en el equipo.
+
+[vars]
+UPN = "paupuga@aytosagunto.es"
+CARPETA = "CREDENCIALES/FIRMAS"
+TENANT_ID = "0e89bb39-2f74-470b-886d-a2d2375152e4"
+ALLOWED_ORIGIN = "https://pauplsua.github.io"
+SIMULADO = "true"
+
+# Los secretos NO se escriben aquí. Se cargan con:
+#   npx wrangler secret put CLIENT_ID
+#   npx wrangler secret put CLIENT_SECRET
+#   npx wrangler secret put NIPS

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<title>Firma de credenciales · Ayuntamiento de Sagunto</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<main class="tarjeta">
+
+  <header class="cabecera">
+    <h1>Firma de credenciales</h1>
+    <p class="subtitulo">Ayuntamiento de Sagunto</p>
+  </header>
+
+  <section id="aviso-config" class="aviso-error" hidden>
+    Falta configurar la dirección del servicio de envío. Consulte el README del proyecto.
+  </section>
+
+  <form id="formulario" novalidate autocomplete="off">
+
+    <div class="campo">
+      <label for="nip">Número de agente (NIP)</label>
+      <input
+        id="nip"
+        name="nip"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4"
+        placeholder="1234"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="done"
+        aria-describedby="nip-ayuda nip-error">
+      <p class="ayuda" id="nip-ayuda">Solo cifras, 3 o 4 dígitos.</p>
+      <p class="error-campo" id="nip-error" role="alert" hidden></p>
+    </div>
+
+    <div class="campo">
+      <div class="fila-etiqueta">
+        <span class="etiqueta" id="firma-etiqueta">Firma</span>
+        <button type="button" id="borrar" class="boton-secundario" disabled>
+          Borrar
+        </button>
+      </div>
+
+      <div class="marco-firma">
+        <canvas id="lienzo" aria-labelledby="firma-etiqueta" role="img"></canvas>
+        <span class="pista" id="pista" aria-hidden="true">Firme aquí con el dedo</span>
+        <span class="linea-guia" aria-hidden="true"></span>
+      </div>
+
+      <p class="error-campo" id="firma-error" role="alert" hidden></p>
+    </div>
+
+    <button type="submit" id="enviar" class="boton-principal">Enviar firma</button>
+
+    <p class="estado" id="estado" role="status" aria-live="polite"></p>
+  </form>
+
+  <section id="exito" class="exito" hidden>
+    <div class="marca-ok" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12.5l5.5 5.5L20 6.5"/>
+      </svg>
+    </div>
+    <h2>Firma registrada</h2>
+    <p class="exito-detalle">Agente <strong id="exito-nip"></strong></p>
+    <p class="exito-archivo">Archivo: <code id="exito-archivo"></code></p>
+    <button type="button" id="otra" class="boton-secundario boton-ancho">
+      Firmar otra credencial
+    </button>
+  </section>
+
+  <details class="legal">
+    <summary>Información sobre sus datos</summary>
+    <p>
+      La firma y el número de agente se utilizan exclusivamente para emitir la
+      credencial municipal y se conservan en el repositorio documental del
+      Ayuntamiento de Sagunto. La firma manuscrita digitalizada es un dato
+      biométrico; puede ejercer sus derechos de acceso, rectificación,
+      supresión y oposición dirigiéndose al Responsable de Protección de Datos
+      del Ayuntamiento de Sagunto.
+    </p>
+  </details>
+
+</main>
+
+<script src="assets/app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+/* Firma de credenciales · Ayuntamiento de Sagunto */
+
+:root {
+  --tinta: #16324a;
+  --texto: #22323f;
+  --texto-suave: #5c6f7d;
+  --fondo: #eef2f6;
+  --blanco: #ffffff;
+  --borde: #d3dde6;
+  --borde-fuerte: #b8c7d4;
+  --azul: #1b5e8c;
+  --azul-hover: #164c72;
+  --verde: #1f7a53;
+  --rojo: #a83232;
+  --radio: 12px;
+  --sombra: 0 1px 2px rgba(22, 50, 74, .06), 0 12px 28px -18px rgba(22, 50, 74, .45);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.tarjeta {
+  width: 100%;
+  max-width: 520px;
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  padding: 28px 24px 22px;
+  box-shadow: var(--sombra);
+}
+
+/* Cabecera ---------------------------------------------------------------- */
+
+.cabecera {
+  padding-bottom: 20px;
+  margin-bottom: 22px;
+  border-bottom: 3px solid var(--tinta);
+}
+
+.cabecera h1 {
+  margin: 0;
+  font-size: 1.42rem;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -.01em;
+  color: var(--tinta);
+}
+
+.subtitulo {
+  margin: 4px 0 0;
+  font-size: .92rem;
+  color: var(--texto-suave);
+}
+
+/* Campos ------------------------------------------------------------------ */
+
+.campo { margin-bottom: 22px; }
+
+label,
+.etiqueta {
+  display: block;
+  margin-bottom: 7px;
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="text"]::placeholder {
+  color: #9fb0be;
+  letter-spacing: normal;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(27, 94, 140, .16);
+}
+
+input[type="text"][aria-invalid="true"] {
+  border-color: var(--rojo);
+  box-shadow: 0 0 0 3px rgba(168, 50, 50, .13);
+}
+
+.ayuda {
+  margin: 6px 0 0;
+  font-size: .82rem;
+  color: var(--texto-suave);
+}
+
+.error-campo {
+  margin: 7px 0 0;
+  font-size: .84rem;
+  font-weight: 500;
+  color: var(--rojo);
+}
+
+/* Firma ------------------------------------------------------------------- */
+
+.fila-etiqueta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.fila-etiqueta .etiqueta { margin-bottom: 0; }
+
+.marco-firma {
+  position: relative;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: #fff;
+  overflow: hidden;
+}
+
+.marco-firma:focus-within {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(27, 94, 140, .16);
+}
+
+#lienzo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 10 / 4.3;
+  touch-action: none;
+  cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.linea-guia {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 22%;
+  border-bottom: 1px dashed #c7d4df;
+  pointer-events: none;
+}
+
+.pista {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -62%);
+  font-size: .92rem;
+  color: #a3b3c0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.pista.oculta { opacity: 0; }
+
+/* Botones ----------------------------------------------------------------- */
+
+.boton-principal,
+.boton-secundario {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, opacity .15s;
+}
+
+.boton-principal {
+  width: 100%;
+  padding: 15px 18px;
+  border: 1px solid var(--azul);
+  background: var(--azul);
+  color: #fff;
+  font-size: 1.02rem;
+}
+
+.boton-principal:hover:not(:disabled) { background: var(--azul-hover); border-color: var(--azul-hover); }
+
+.boton-principal:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+.boton-secundario {
+  padding: 8px 14px;
+  border: 1px solid var(--borde-fuerte);
+  background: #fff;
+  color: var(--tinta);
+  font-size: .86rem;
+}
+
+.boton-secundario:hover:not(:disabled) {
+  border-color: var(--azul);
+  color: var(--azul);
+}
+
+.boton-secundario:disabled {
+  color: #a9b7c2;
+  border-color: var(--borde);
+  cursor: default;
+}
+
+.boton-ancho { width: 100%; margin-top: 18px; padding: 12px; font-size: .95rem; }
+
+:where(button, input, summary):focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 2px;
+}
+
+/* Estado ------------------------------------------------------------------ */
+
+.estado {
+  margin: 12px 0 0;
+  min-height: 1.2em;
+  font-size: .88rem;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+.estado.es-error { color: var(--rojo); font-weight: 500; }
+
+.aviso-error {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid #e4b7b7;
+  border-left: 4px solid var(--rojo);
+  border-radius: 8px;
+  background: #fdf3f3;
+  font-size: .88rem;
+  color: #7d2626;
+}
+
+/* Éxito ------------------------------------------------------------------- */
+
+.exito { text-align: center; padding: 8px 0 4px; }
+
+.marca-ok {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf4ee;
+  color: var(--verde);
+}
+
+.exito h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: var(--tinta);
+}
+
+.exito-detalle {
+  margin: 0 0 4px;
+  color: var(--texto-suave);
+  font-size: .95rem;
+}
+
+.exito-archivo {
+  margin: 0;
+  font-size: .84rem;
+  color: var(--texto-suave);
+  word-break: break-all;
+}
+
+.exito-archivo code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--tinta);
+}
+
+/* Legal ------------------------------------------------------------------- */
+
+.legal {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde);
+  font-size: .82rem;
+  color: var(--texto-suave);
+}
+
+.legal summary {
+  cursor: pointer;
+  color: var(--texto-suave);
+  font-weight: 500;
+}
+
+.legal p { margin: 10px 0 0; }
+
+@media (max-width: 380px) {
+  .tarjeta { padding: 22px 18px 18px; }
+  .cabecera h1 { font-size: 1.28rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
