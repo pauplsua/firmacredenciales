@@ -139,10 +139,12 @@ function decodificarJpeg(imagen) {
   }
 
   if (bytes.length < 4) throw new Error("La imagen está vacía.");
-  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+  // Utilities.base64Decode devuelve bytes con signo (-128..127), por eso
+  // se normalizan con & 0xFF antes de comparar.
+  if ((bytes[0] & 0xff) !== 0xff || (bytes[1] & 0xff) !== 0xd8 || (bytes[2] & 0xff) !== 0xff) {
     throw new Error("La imagen no es un JPEG válido.");
   }
-  if (bytes[bytes.length - 2] !== 0xff || bytes[bytes.length - 1] !== 0xd9) {
+  if ((bytes[bytes.length - 2] & 0xff) !== 0xff || (bytes[bytes.length - 1] & 0xff) !== 0xd9) {
     throw new Error("La imagen está incompleta.");
   }
 
