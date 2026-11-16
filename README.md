@@ -12,6 +12,8 @@ OneDrive.
   cuentas de Cloudflare.
 - Nombres del adjunto: `1234.jpg`. Si el mismo agente firma otra vez:
   `1234_2026-11-16-103205.jpg`.
+- La imagen se **recorta automáticamente** al área de la firma (con ~24 px de
+  margen), eliminando el espacio en blanco para que encaje en la credencial.
 
 ```
 Móvil ──▶ GitHub Pages (HTML/JS) ──▶ Apps Script ──▶ Tu bandeja corporativa
