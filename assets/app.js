@@ -223,8 +223,10 @@ function validar() {
 /* ---------------------------------------------------------------- exportar */
 
 function exportarJpeg() {
+  if (!anchoCss || !altoCss) ajustarLienzo();
+
   const ancho = CONFIG.maxDimension;
-  const alto = Math.max(1, Math.round((ancho * altoCss) / anchoCss));
+  const alto = Math.max(1, Math.round((ancho * altoCss) / (anchoCss || ancho)));
 
   const salida = document.createElement("canvas");
   salida.width = ancho;
