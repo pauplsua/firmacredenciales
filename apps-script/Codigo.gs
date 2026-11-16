@@ -139,12 +139,12 @@ function decodificarJpeg(imagen) {
   }
 
   if (bytes.length < 4) throw new Error("La imagen está vacía.");
-  // Utilities.base64Decode devuelve bytes con signo (-128..127), por eso
-  // se normalizan con & 0xFF antes de comparar.
-  if ((bytes[0] & 0xff) !== 0xff || (bytes[1] & 0xff) !== 0xd8 || (bytes[2] & 0xff) !== 0xff) {
+  // base64Decode devuelve bytes con signo (-128..127).
+  // 0xff = -1, 0xd8 = -40, 0xd9 = -39
+  if (bytes[0] !== -1 || bytes[1] !== -40 || bytes[2] !== -1) {
     throw new Error("La imagen no es un JPEG válido.");
   }
-  if ((bytes[bytes.length - 2] & 0xff) !== 0xff || (bytes[bytes.length - 1] & 0xff) !== 0xd9) {
+  if (bytes[bytes.length - 2] !== -1 || bytes[bytes.length - 1] !== -39) {
     throw new Error("La imagen está incompleta.");
   }
 
@@ -202,7 +202,17 @@ function leerNips() {
   var partes = crudo.split(/[\s,;]+/);
   for (var i = 0; i < partes.length; i++) {
     var n = partes[i].trim();
-    if (/^\d{3,4}$/.test(n) && !vistos[n]) {
+    var esValido = n.length >= 3 && n.length <= 4;
+    if (esValido) {
+      for (var j = 0; j < n.length; j++) {
+        var c = n.charAt(j);
+        if (c < "0" || c > "9") {
+          esValido = false;
+          break;
+        }
+      }
+    }
+    if (esValido && !vistos[n]) {
       vistos[n] = true;
       resultado.add(n);
     }
