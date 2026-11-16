@@ -26,6 +26,8 @@ jobs:
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       # Solo se publica lo que debe ser público. El código de Apps Script,
       # la documentación y el servidor local no salen al sitio web.
