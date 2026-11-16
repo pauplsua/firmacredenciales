@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Comprobar conexión · Firma de credenciales</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<main class="tarjeta">
+
+  <header class="cabecera">
+    <h1>Comprobar conexión</h1>
+    <p class="subtitulo">Página de diagnóstico · no la usan los agentes</p>
+  </header>
+
+  <p class="ayuda" style="margin-top:-6px;margin-bottom:20px">
+    Envía una firma de prueba al servicio y muestra exactamente qué responde.
+    Úsela una sola vez, al terminar la instalación.
+  </p>
+
+  <form id="formulario" novalidate>
+    <div class="campo">
+      <label for="url">Dirección del servicio</label>
+      <input id="url" type="text" placeholder="https://script.google.com/macros/s/…/exec"
+             autocomplete="off" spellcheck="false">
+      <p class="ayuda">La URL que termina en <code>/exec</code>.</p>
+    </div>
+
+    <div class="campo">
+      <label for="nip">NIP de prueba</label>
+      <input id="nip" type="text" inputmode="numeric" maxlength="4" placeholder="109"
+             autocomplete="off" spellcheck="false">
+      <p class="ayuda">Debe existir en el listado del script.</p>
+    </div>
+
+    <button type="submit" id="probar" class="boton-principal">Probar</button>
+  </form>
+
+  <pre id="resultado" hidden></pre>
+
+  <p class="legal"><a href="./">Volver a la página de firma</a></p>
+
+</main>
+
+<script>
+  const formulario = document.getElementById("formulario");
+  const campoUrl = document.getElementById("url");
+  const campoNip = document.getElementById("nip");
+  const boton = document.getElementById("probar");
+  const resultado = document.getElementById("resultado");
+
+  // Firma sintética para que el servicio la acepte como válida.
+  function firmaDePrueba() {
+    const lienzo = document.createElement("canvas");
+    lienzo.width = 900;
+    lienzo.height = 380;
+    const ctx = lienzo.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 900, 380);
+    ctx.strokeStyle = "#12222e";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(90, 280);
+    for (let i = 0; i < 40; i++) {
+      ctx.lineTo(90 + i * 18, 280 - Math.sin(i / 3) * 70);
+    }
+    ctx.stroke();
+    return lienzo.toDataURL("image/jpeg", 0.9);
+  }
+
+  formulario.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    const url = campoUrl.value.trim();
+    const nip = campoNip.value.trim();
+
+    if (!/^https:\/\/.+/.test(url)) {
+      mostrar({ error: "Escriba una URL https válida." });
+      return;
+    }
+
+    boton.disabled = true;
+    boton.textContent = "Probando…";
+    mostrar({ estado: "Enviando…" });
+
+    const inicio = performance.now();
+    try {
+      const respuesta = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ nip, imagen: firmaDePrueba() }),
+      });
+
+      const texto = await respuesta.text();
+      let json = null;
+      try {
+        json = JSON.parse(texto);
+      } catch {
+        /* no era JSON */
+      }
+
+      mostrar({
+        "correcto": json && json.ok === true ? "SÍ" : "NO",
+        "código HTTP": respuesta.status,
+        "milisegundos": Math.round(performance.now() - inicio),
+        "respuesta": json || texto.slice(0, 600),
+        "diagnóstico": json && json.ok === true
+          ? "El servicio responde y guarda correctamente."
+          : "El servicio respondió pero rechazó la petición: revise el mensaje de error.",
+      });
+    } catch (error) {
+      mostrar({
+        "correcto": "NO",
+        "error": String(error),
+        "diagnóstico":
+          "No se ha podido contactar. Causas habituales: la URL no termina en /exec, " +
+          "el despliegue no es «Cualquier persona», o el navegador ha bloqueado la " +
+          "conexión. Abra la consola (F12) para ver el detalle.",
+      });
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Probar";
+    }
+  });
+
+  function mostrar(datos) {
+    resultado.hidden = false;
+    resultado.textContent = JSON.stringify(datos, null, 2);
+  }
+</script>
+</body>
+</html>

@@ -1,109 +1,97 @@
 # Firma de credenciales
 
 Página web para que los agentes firmen con el dedo en el móvil. La firma se
-guarda en OneDrive como imagen **JPEG** con el número de agente (NIP) como
-nombre de archivo.
+guarda como imagen **JPEG** en Google Drive, con el número de agente (NIP)
+como nombre de archivo.
 
-- Web estática publicada en **GitHub Pages** (sin servidor propio).
-- **Cloudflare Worker** como intermediario: valida el NIP y sube el archivo.
-- Almacenamiento en **OneDrive** vía Microsoft Graph, carpeta
-  `CREDENCIALES/FIRMAS`.
+- Web estática publicada en **GitHub Pages**. Sin servidor propio.
+- **Google Apps Script** hace de servicio: valida el NIP y guarda el archivo
+  en Drive con tu propia cuenta.
+- No requiere administradores de Microsoft, ni permisos de Entra ID, ni
+  cuentas de Cloudflare.
 - Nombres: `1234.jpg`. Si ya existe: `1234_2026-11-16-103205.jpg`.
 
 ```
-Móvil ──▶ GitHub Pages (HTML/JS) ──▶ Cloudflare Worker ──▶ Microsoft Graph ──▶ OneDrive
-                                    (valida NIP, guarda el secreto)
+Móvil ──▶ GitHub Pages (HTML/JS) ──▶ Apps Script ──▶ Google Drive
+                                     (valida NIP, guarda el JPEG)
 ```
 
 ## Estructura
 
 ```
-index.html                  Página de firma
-assets/                     Estilos, lógica del canvas e icono
-worker/src/index.js         Worker de Cloudflare (una sola función, sin dependencias)
-worker/wrangler.toml        Configuración opcional para desplegar con wrangler
-worker/nips.ejemplo.txt     Formato del listado (valores de mentira)
-.github/workflows/pages.yml Publicación automática al hacer push a main
-SETUP-ONEDRIVE.md           Guía paso a paso de Entra ID y Cloudflare
+index.html                    Página de firma
+comprobar.html                Diagnóstico de la conexión (uso puntual)
+assets/                       Estilos, lógica del canvas e icono
+apps-script/Codigo.gs         Servicio de Google Apps Script
+apps-script/appsscript.json   Manifiesto (zona horaria, permisos)
+.github/workflows/pages.yml   Publicación automática al hacer push a main
+SETUP-GOOGLE-DRIVE.md         Guía de puesta en marcha paso a paso
+herramientas/servir-local.ps1 Previsualizar en el equipo sin instalar nada
 ```
 
-## Puesta en marcha
+## Puesta en marcha (resumen)
 
-### 1. Publicar la web
+1. Crear la carpeta `CREDENCIALES/FIRMAS` en Google Drive.
+2. Crear un proyecto en <https://script.google.com>, pegar
+   `apps-script/Codigo.gs` y poner el ID de la carpeta.
+3. Cargar el listado de NIP en **Propiedades del script** (clave `NIPS`).
+4. **Implementar › Nueva implementación › Aplicación web**
+   (ejecutar como *Yo*, acceso *Cualquier persona*).
+5. Pegar la URL `/exec` resultante en `CONFIG.endpoint` de `assets/app.js`.
+6. Subir el proyecto a GitHub y activar Pages
+   (**Settings › Pages › Source: GitHub Actions**).
 
-1. Crea el repositorio vacío `firmacredenciales` en GitHub (público).
-2. Sube este proyecto a la rama `main`.
-3. En GitHub: **Settings › Pages › Source = GitHub Actions**.
-4. Al hacer push, el workflow publica en
-   `https://pauplsua.github.io/firmacredenciales/`.
+El detalle, con capturas de qué marcar en cada pantalla, está en
+`SETUP-GOOGLE-DRIVE.md`.
 
-### 2. Preparar el acceso a OneDrive
+## Qué valida
 
-Sigue `SETUP-ONEDRIVE.md`. Necesitas un administrador de Entra ID que apruebe
-el permiso `Files.ReadWrite.All`. Al terminar tendrás `CLIENT_ID` y
-`CLIENT_SECRET`.
+| Dónde | Qué comprueba |
+|---|---|
+| Navegador | Solo cifras, 3-4 dígitos, que haya firma |
+| Apps Script | Que el NIP esté en el listado real |
+| Apps Script | Que la imagen sea un JPEG completo y con contenido |
 
-### 3. Desplegar el Worker
+El listado de NIP vive **solo** en el script: nunca se descarga al navegador,
+así que aunque la web sea pública no se pueden enumerar los agentes.
 
-1. Cloudflare › **Workers & Pages › Create › Worker** (plan gratuito).
-2. Pega el contenido de `worker/src/index.js`, guarda y despliega.
-3. En **Settings › Variables and Secrets** añade las variables de la tabla.
-4. Copia la URL resultante, del tipo
-   `https://firmacredenciales.tu-subdominio.workers.dev`.
+## Actualizar el listado de NIP
 
-### 4. Conectar la web con el Worker
+No se toca el código: ⚙️ Configuración del proyecto › Propiedades del script ›
+`NIPS`. El cambio es inmediato, sin publicar versión nueva.
 
-Edita `assets/app.js` y cambia:
+El archivo `apps-script/nips.local.txt` de tu equipo contiene la lista actual
+en el formato exacto que espera esa propiedad. Está en `.gitignore`: no se sube
+nunca al repositorio.
 
-```js
-endpoint: "https://firmacredenciales.CAMBIAR.workers.dev",
+## Previsualizar en local
+
+```powershell
+powershell -ExecutionPolicy Bypass -File herramientas\servir-local.ps1
 ```
 
-por la URL real. Haz commit y push.
-
-### 5. Probar
-
-- Abre `https://<worker>/api/salud`: debe responder `{"ok":true,...}`.
-- Abre la web en el móvil, teclea un NIP del listado y firma.
-- Comprueba que aparece el archivo en `OneDrive › CREDENCIALES › FIRMAS`.
-
-## Variables del Worker
-
-| Variable | Ejemplo | Secreto | Para qué |
-|---|---|---|---|
-| `UPN` | `paupuga@aytosagunto.es` | no | Cuenta de OneDrive destino |
-| `CARPETA` | `CREDENCIALES/FIRMAS` | no | Ruta destino |
-| `TENANT_ID` | `0e89bb39-…` | no | Inquilino de Microsoft 365 |
-| `CLIENT_ID` | `a1b2c3…` | sí | App registration |
-| `CLIENT_SECRET` | *(valor)* | sí | Secreto de la app |
-| `NIPS` | `109,327,328,…` | sí | Listado válido de agentes |
-| `ALLOWED_ORIGIN` | `https://pauplsua.github.io` | no | Dominio permitido |
-| `SIMULADO` | `true` / `false` | no | Pruebas sin escribir en OneDrive |
-
-Con `SIMULADO=true` el Worker valida todo y responde correctamente, pero no
-sube nada. Útil para la primera prueba de extremo a extremo.
-
-## Actualizar el listado de agentes
-
-El listado **no está en el repositorio** (sería público). Vive en el secreto
-`NIPS` del Worker:
-
-1. Actualiza el CSV de origen.
-2. Genera la lista separada por comas.
-3. Cloudflare › Worker › Settings › `NIPS` › Edit › pega y guarda.
-
-El archivo `worker/nips.local.txt` de tu equipo ya contiene la lista actual
-(está en `.gitignore`, no se sube nunca).
+Y abrir <http://localhost:8765/>. Sin `endpoint` configurado la página avisa y
+deshabilita el envío, pero se puede dibujar y probar la validación.
 
 ## Límites y consideraciones
 
-- La página es **abierta a internet**. Cualquiera que la encuentre puede
-  enviar una firma con un NIP válido. Si eso no es aceptable, se puede
-  añadir Cloudflare Turnstile, restricción por país o una clave de acceso.
-- Validación en dos niveles: el navegador comprueba el formato (3-4 cifras) y
-  el Worker comprueba que el NIP esté en el listado.
-- El listado llega al Worker como secreto, nunca al navegador.
-- La firma manuscrita digitalizada puede considerarse dato biométrico.
-  La página incluye una cláusula informativa básica; conviene que la revise
-  el responsable de protección de datos del Ayuntamiento.
-- Límite por envío: 2 MB de imagen (el navegador exporta ~100-250 KB).
+- La página es **abierta a internet**: quien encuentre la URL puede enviar una
+  firma con un NIP válido. Se puede añadir Turnstile o una palabra de paso.
+- Una firma manuscrita digitalizada es un **dato biométrico**. La página
+  incluye una cláusula informativa; conviene que la revise el responsable de
+  protección de datos. Ver el aviso del Paso 0 de la guía sobre qué cuenta de
+  Google usar.
+- Límite por envío: 3 MB (el navegador exporta ~20-250 KB).
+- Cuotas de Apps Script: 20 000 ejecuciones/día y 90 min/día en cuentas
+  personales. Sobrado para un centenar de firmas.
+
+## Historial
+
+La primera versión guardaba en OneDrive mediante un Worker de Cloudflare y una
+aplicación de Entra ID. Se descartó porque requiere consentimiento de
+administrador. Sigue recuperable:
+
+```powershell
+git show 053a191:worker/src/index.js
+git show 053a191:SETUP-ONEDRIVE.md
+```

@@ -317,6 +317,30 @@ input[type="text"][aria-invalid="true"] {
 
 .legal p { margin: 10px 0 0; }
 
+.legal a {
+  color: var(--azul);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.legal a:hover { text-decoration: underline; }
+
+/* Diagnóstico (comprobar.html) -------------------------------------------- */
+
+pre#resultado {
+  margin: 22px 0 0;
+  padding: 14px 16px;
+  background: #f7f9fb;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: .78rem;
+  line-height: 1.5;
+  color: var(--texto);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 380px) {
   .tarjeta { padding: 22px 18px 18px; }
   .cabecera h1 { font-size: 1.28rem; }

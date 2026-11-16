@@ -1,17 +1,11 @@
-# Dependencias y artefactos
-node_modules/
-.wrangler/
-dist/
-
-# Configuración local con secretos
+# Configuración local con datos reales (nunca se publica)
+*.local.txt
 .env
 .dev.vars
-worker/.dev.vars
-worker/.env
 
-# Listados reales de NIP (nunca deben publicarse)
-worker/nips.local.txt
-*.local.txt
+# Dependencias y artefactos
+node_modules/
+dist/
 
 # Sistema
 .DS_Store

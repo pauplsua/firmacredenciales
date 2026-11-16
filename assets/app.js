@@ -2,14 +2,20 @@
  * Firma de credenciales · Ayuntamiento de Sagunto
  *
  * 1) El usuario teclea su NIP y firma con el dedo sobre el <canvas>.
- * 2) Al enviar, la firma se convierte a JPEG y se manda al Worker
- *    (Cloudflare) que la guarda en OneDrive como "<NIP>.jpg" o, si ya
- *    existía, "<NIP>_AAAAMMDD-HHMMSS.jpg".
+ * 2) Al enviar, la firma se convierte a JPEG y se manda a una aplicación
+ *    web de Google Apps Script que la guarda en Google Drive como
+ *    "<NIP>.jpg" o, si ya existía, "<NIP>_AAAAMMDD-HHMMSS.jpg".
  */
 
 const CONFIG = {
-  // URL del Worker. Sustituir por la definitiva tras desplegarlo.
-  endpoint: "https://firmacredenciales.CAMBIAR.workers.dev",
+  // URL de la aplicación web de Google Apps Script (termina en /exec).
+  // Se obtiene al implementarla: Implementar › Nueva implementación.
+  endpoint: "",
+
+  // text/plain evita la petición de comprobación previa (preflight) del
+  // navegador, que Apps Script no responde. El cuerpo sigue siendo JSON.
+  tipoContenido: "text/plain;charset=utf-8",
+
   maxDimension: 1100, // ancho de la imagen exportada, en píxeles
   calidadJpeg: 0.9,
   timeoutMs: 25000,
@@ -41,7 +47,7 @@ let enviando = false;
 
 /* -------------------------------------------------------------- configuración */
 
-if (CONFIG.endpoint.includes("CAMBIAR")) {
+if (!CONFIG.endpoint.trim()) {
   avisoConfig.hidden = false;
   botonEnviar.disabled = true;
 }
@@ -282,9 +288,9 @@ formulario.addEventListener("submit", async (evento) => {
 
     if (!base64) throw new Error("La firma está vacía.");
 
-    const respuesta = await fetch(CONFIG.endpoint.replace(/\/+$/, "") + "/api/firma", {
+    const respuesta = await fetch(CONFIG.endpoint.trim(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": CONFIG.tipoContenido },
       body: JSON.stringify({ nip, imagen: "data:image/jpeg;base64," + base64 }),
       signal: control.signal,
     });
@@ -296,16 +302,22 @@ formulario.addEventListener("submit", async (evento) => {
       /* respuesta sin JSON */
     }
 
-    if (!respuesta.ok) {
+    // Apps Script siempre responde 200, así que la señal de éxito es datos.ok.
+    if (!respuesta.ok || datos.ok !== true) {
       throw new Error(datos.error || "No se ha podido guardar la firma.");
     }
 
     mostrarExito(nip, datos.archivo || nip + ".jpg");
   } catch (error) {
-    const mensaje =
-      error && error.name === "AbortError"
-        ? "La operación ha tardado demasiado. Compruebe su conexión e inténtelo de nuevo."
-        : (error && error.message) || "No se ha podido guardar la firma.";
+    let mensaje;
+    if (error && error.name === "AbortError") {
+      mensaje = "La operación ha tardado demasiado. Compruebe su conexión e inténtelo de nuevo.";
+    } else if (error instanceof TypeError) {
+      // fetch lanza TypeError cuando no hay red o el navegador bloquea la conexión.
+      mensaje = "No se ha podido contactar con el servicio. Compruebe su conexión e inténtelo de nuevo.";
+    } else {
+      mensaje = (error && error.message) || "No se ha podido guardar la firma.";
+    }
     mostrarEstado(mensaje, true);
   } finally {
     window.clearTimeout(temporizador);

@@ -27,10 +27,18 @@ jobs:
       - name: Configurar Pages
         uses: actions/configure-pages@v5
 
+      # Solo se publica lo que debe ser público. El código de Apps Script,
+      # la documentación y el servidor local no salen al sitio web.
+      - name: Preparar el sitio
+        run: |
+          mkdir -p _sitio
+          cp index.html comprobar.html _sitio/
+          cp -r assets _sitio/assets
+
       - name: Empaquetar el sitio
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _sitio
 
       - name: Desplegar
         id: despliegue
