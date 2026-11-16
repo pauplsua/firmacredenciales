@@ -10,7 +10,7 @@
 const CONFIG = {
   // URL de la aplicación web de Google Apps Script (termina en /exec).
   // Se obtiene al implementarla: Implementar › Nueva implementación.
-  endpoint: "",
+  endpoint: "https://script.google.com/macros/s/AKfycbyqViOiVaJeAwPuTuKOzB_dLMKVGD0m55QCBDhdhCR_KoD3eDhKqc02cugc_AhCNCalHA/exec",
 
   // text/plain evita la petición de comprobación previa (preflight) del
   // navegador, que Apps Script no responde. El cuerpo sigue siendo JSON.
