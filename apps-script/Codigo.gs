@@ -2,8 +2,11 @@
  * Firma de credenciales · Ayuntamiento de Sagunto
  * ------------------------------------------------------------------
  * Servicio web de Google Apps Script: recibe la firma desde la página
- * de GitHub Pages y la guarda en una carpeta de Google Drive con el
- * NIP como nombre de archivo.
+ * de GitHub Pages y la envía por correo electrónico con el JPEG adjunto.
+ *
+ * El correo llega a la bandeja corporativa con asunto
+ * "Firma credencial <NIP>", listo para una regla de Outlook que guarde
+ * el adjunto en OneDrive.
  *
  * Despliegue:  Implementar › Nueva implementación › Aplicación web
  *              - Ejecutar como: Yo
@@ -15,46 +18,37 @@
  */
 
 var CONFIG = {
-  // Carpeta destino dentro de Mi unidad. Lo más seguro y rápido es
-  // pegar aquí el ID de la carpeta (la parte final de su URL).
-  // Si se deja vacío, se crea o reutiliza la ruta RUTA_CARPETA.
-  ID_CARPETA: "",
-  RUTA_CARPETA: "CREDENCIALES/FIRMAS",
+  // Correo corporativo al que se envía la firma.
+  CORREO_DESTINO: "p.puga@aytosagunto.es",
+
+  // Nombre visible del remitente (el correo sale de la cuenta de Google
+  // del script; para que salga de la cuenta corporativa hay que añadir
+  // esa dirección como alias en Gmail, ver la guía).
+  NOMBRE_REMITENTE: "Firma de credenciales",
+
+  // Dirección a la que se responderá (tu correo corporativo).
+  RESPONDER_A: "p.puga@aytosagunto.es",
 
   // Listado de reserva. El listado real NO se escribe aquí: va en
   // Configuración del proyecto › Propiedades del script › NIPS.
-  // Así este archivo puede publicarse sin exponer los números.
   NIPS: ["109", "327", "328"],
 
   ZONA: "Europe/Madrid",
   MAX_BYTES: 3 * 1024 * 1024,
 
-  // true = valida y responde, pero no guarda nada en Drive.
+  // true = valida y responde, pero no envía correo.
   SIMULADO: false,
 };
 
 /* ------------------------------------------------------------------ GET */
 
-/**
- * Comprobación rápida: abrir la URL /exec en el navegador debe devolver
- * un JSON con ok: true.
- */
 function doGet() {
-  var carpeta = "";
-  var aviso = "";
-  try {
-    carpeta = obtenerCarpeta().getName();
-  } catch (err) {
-    aviso = String(err && err.message ? err.message : err);
-  }
   return responder({
-    ok: !aviso,
+    ok: true,
     servicio: "firmacredenciales",
     nipsCargados: leerNips().size,
     origenListado: origenListado(),
-    carpeta: carpeta,
     simulado: CONFIG.SIMULADO,
-    aviso: aviso,
   });
 }
 
@@ -97,20 +91,27 @@ function procesar(e) {
     throw new Error("La imagen de la firma está vacía.");
   }
 
+  var nombre = nombreArchivo(nip);
+
   if (CONFIG.SIMULADO) {
-    return { ok: true, archivo: nip + ".jpg", simulado: true };
+    return { ok: true, archivo: nombre, simulado: true };
   }
 
-  var bloqueo = LockService.getScriptLock();
-  var obtenido = bloqueo.tryLock(15000);
-  try {
-    var carpeta = obtenerCarpeta();
-    var nombre = nombreLibre(carpeta, nip);
-    var archivo = carpeta.createFile(Utilities.newBlob(bytes, "image/jpeg", nombre));
-    return { ok: true, archivo: archivo.getName(), simulado: false };
-  } finally {
-    if (obtenido) bloqueo.releaseLock();
-  }
+  var blob = Utilities.newBlob(bytes, "image/jpeg", nombre);
+
+  MailApp.sendEmail({
+    to: CONFIG.CORREO_DESTINO,
+    subject: "Firma credencial " + nip,
+    body:
+      "Se adjunta la firma manuscrita del agente " + nip + ".\n\n" +
+      "Archivo: " + nombre + "\n" +
+      "Fecha: " + Utilities.formatDate(new Date(), CONFIG.ZONA, "dd/MM/yyyy HH:mm:ss"),
+    name: CONFIG.NOMBRE_REMITENTE,
+    replyTo: CONFIG.RESPONDER_A,
+    attachments: [blob],
+  });
+
+  return { ok: true, archivo: nombre, simulado: false };
 }
 
 /* --------------------------------------------------------------- imagen */
@@ -137,7 +138,6 @@ function decodificarJpeg(imagen) {
     throw new Error("La imagen recibida está dañada.");
   }
 
-  // Marcadores JPEG: inicio FF D8 FF y fin FF D9.
   if (bytes.length < 4) throw new Error("La imagen está vacía.");
   if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
     throw new Error("La imagen no es un JPEG válido.");
@@ -149,53 +149,42 @@ function decodificarJpeg(imagen) {
   return bytes;
 }
 
-/* ---------------------------------------------------------------- Drive */
-
-function obtenerCarpeta() {
-  if (CONFIG.ID_CARPETA) {
-    return DriveApp.getFolderById(CONFIG.ID_CARPETA);
-  }
-
-  var actual = DriveApp.getRootFolder();
-  var partes = String(CONFIG.RUTA_CARPETA).split("/");
-  for (var i = 0; i < partes.length; i++) {
-    var nombre = partes[i].trim();
-    if (!nombre) continue;
-    var encontradas = actual.getFoldersByName(nombre);
-    actual = encontradas.hasNext() ? encontradas.next() : actual.createFolder(nombre);
-  }
-  return actual;
-}
+/* ------------------------------------------------------- nombre archivo */
 
 /**
- * 109.jpg la primera vez; si ya existe, 109_2026-11-16-103205.jpg.
+ * Primera firma de un NIP: "109.jpg".
+ * Siguientes: "109_2026-11-16-103205.jpg".
+ * Se lleva la cuenta en una propiedad del script.
  */
-function nombreLibre(carpeta, nip) {
-  if (!existe(carpeta, nip + ".jpg")) return nip + ".jpg";
-
-  var marca = Utilities.formatDate(new Date(), CONFIG.ZONA, "yyyy-MM-dd-HHmmss");
-  var candidato = nip + "_" + marca + ".jpg";
-  var intento = 1;
-  while (existe(carpeta, candidato) && intento <= 10) {
-    candidato = nip + "_" + marca + "-" + intento + ".jpg";
-    intento++;
+function nombreArchivo(nip) {
+  var clave = "firma_" + nip;
+  var propiedades = PropertiesService.getScriptProperties();
+  var contador = 0;
+  try {
+    contador = parseInt(propiedades.getProperty(clave) || "0", 10) || 0;
+  } catch (err) {
+    contador = 0;
   }
-  return candidato;
-}
 
-function existe(carpeta, nombre) {
-  return carpeta.getFilesByName(nombre).hasNext();
+  var nombre;
+  if (contador === 0) {
+    nombre = nip + ".jpg";
+  } else {
+    var marca = Utilities.formatDate(new Date(), CONFIG.ZONA, "yyyy-MM-dd-HHmmss");
+    nombre = nip + "_" + marca + ".jpg";
+  }
+
+  try {
+    propiedades.setProperty(clave, String(contador + 1));
+  } catch (err) {
+    // No bloquea el envío si no se puede guardar el contador.
+  }
+
+  return nombre;
 }
 
 /* ----------------------------------------------------------- utilidades */
 
-/**
- * Listado de NIP autorizados. Prioridad:
- *   1. Propiedad del script "NIPS" (coma, punto y coma, espacio o salto de línea).
- *   2. Lista de reserva CONFIG.NIPS.
- * Se lee en cada petición, así que cambiar la propiedad NO requiere
- * publicar una versión nueva.
- */
 function leerNips() {
   var propiedad = "";
   try {
