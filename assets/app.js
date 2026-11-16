@@ -17,6 +17,7 @@ const CONFIG = {
   tipoContenido: "text/plain;charset=utf-8",
 
   maxDimension: 1100, // ancho de la imagen exportada, en píxeles
+  margenRecorte: 24, // píxeles de margen alrededor de la firma al recortar
   calidadJpeg: 0.9,
   timeoutMs: 25000,
 };
@@ -234,20 +235,64 @@ function exportarJpeg() {
   const ancho = CONFIG.maxDimension;
   const alto = Math.max(1, Math.round((ancho * altoCss) / (anchoCss || ancho)));
 
-  const salida = document.createElement("canvas");
-  salida.width = ancho;
-  salida.height = alto;
-  const ctxSalida = salida.getContext("2d");
+  // 1. Renderizar la firma completa sobre fondo blanco.
+  const completo = document.createElement("canvas");
+  completo.width = ancho;
+  completo.height = alto;
+  const ctxCompleto = completo.getContext("2d");
+  ctxCompleto.fillStyle = "#ffffff";
+  ctxCompleto.fillRect(0, 0, ancho, alto);
+  for (const trazo of trazos) pintarTrazo(ctxCompleto, trazo, ancho, alto);
 
-  ctxSalida.fillStyle = "#ffffff";
-  ctxSalida.fillRect(0, 0, ancho, alto);
+  // 2. Encontrar el rectángulo que contiene la firma (píxeles no blancos).
+  const datos = ctxCompleto.getImageData(0, 0, ancho, alto).data;
+  let minX = ancho, minY = alto, maxX = 0, maxY = 0;
+  let hayFirma = false;
 
-  for (const trazo of trazos) {
-    pintarTrazo(ctxSalida, trazo, ancho, alto);
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const i = (y * ancho + x) * 4;
+      if (datos[i] < 245 || datos[i + 1] < 245 || datos[i + 2] < 245) {
+        hayFirma = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
   }
 
+  // Si por algún motivo no hay firma, devolver la imagen completa.
+  if (!hayFirma) {
+    return new Promise((resolve, reject) => {
+      completo.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo generar la imagen."))),
+        "image/jpeg",
+        CONFIG.calidadJpeg
+      );
+    });
+  }
+
+  // 3. Recortar con margen, sin salir de los límites del canvas.
+  const margen = CONFIG.margenRecorte;
+  const x0 = Math.max(0, minX - margen);
+  const y0 = Math.max(0, minY - margen);
+  const x1 = Math.min(ancho, maxX + 1 + margen);
+  const y1 = Math.min(alto, maxY + 1 + margen);
+  const anchoRecorte = Math.max(1, x1 - x0);
+  const altoRecorte = Math.max(1, y1 - y0);
+
+  // 4. Renderizar solo la zona recortada.
+  const recortado = document.createElement("canvas");
+  recortado.width = anchoRecorte;
+  recortado.height = altoRecorte;
+  const ctxRecortado = recortado.getContext("2d");
+  ctxRecortado.fillStyle = "#ffffff";
+  ctxRecortado.fillRect(0, 0, anchoRecorte, altoRecorte);
+  ctxRecortado.drawImage(completo, x0, y0, anchoRecorte, altoRecorte, 0, 0, anchoRecorte, altoRecorte);
+
   return new Promise((resolve, reject) => {
-    salida.toBlob(
+    recortado.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo generar la imagen."))),
       "image/jpeg",
       CONFIG.calidadJpeg
