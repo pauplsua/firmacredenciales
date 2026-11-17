@@ -304,3 +304,39 @@ function mensaje(err) {
   var texto = err && err.message ? err.message : String(err);
   return texto.slice(0, 300);
 }
+
+/* -------------------------------------------------- mantenimiento */
+
+/**
+ * Rellena la columna B (Veces) con los contadores ya existentes en
+ * Propiedades del script, sin borrar Fecha/Archivo/IP/Ubicación/Dispositivo.
+ * Útil para las firmas realizadas antes de activar el registro en la hoja.
+ */
+function rellenarVecesExistentes() {
+  if (!CONFIG.ID_HOJA_REGISTRO) {
+    Logger.log("No hay ID_HOJA_REGISTRO configurado.");
+    return;
+  }
+
+  var hoja = SpreadsheetApp.openById(CONFIG.ID_HOJA_REGISTRO).getActiveSheet();
+  var props = PropertiesService.getScriptProperties().getProperties();
+  var ultimaFila = hoja.getLastRow();
+
+  var actualizados = 0;
+
+  for (var i = 2; i <= ultimaFila; i++) {
+    var nip = String(hoja.getRange(i, 1).getValue() || "").trim();
+    if (!nip) continue;
+
+    var clave = "firma_" + nip;
+    var veces = parseInt(props[clave] || "0", 10) || 0;
+
+    if (veces > 0) {
+      hoja.getRange(i, 2).setValue(veces);
+      actualizados++;
+      Logger.log("NIP " + nip + " → " + veces + " vez/veces");
+    }
+  }
+
+  Logger.log("Filas actualizadas: " + actualizados);
+}
