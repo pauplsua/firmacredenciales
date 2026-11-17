@@ -21,22 +21,23 @@ var CONFIG = {
   // Correo corporativo al que se envía la firma.
   CORREO_DESTINO: "p.puga@aytosagunto.es",
 
-  // Nombre visible del remitente (el correo sale de la cuenta de Google
-  // del script; para que salga de la cuenta corporativa hay que añadir
-  // esa dirección como alias en Gmail, ver la guía).
+  // Nombre visible del remitente.
   NOMBRE_REMITENTE: "Firma de credenciales",
 
-  // Dirección a la que se responderá (tu correo corporativo).
+  // Dirección a la que se responderá.
   RESPONDER_A: "p.puga@aytosagunto.es",
 
-  // Listado de reserva. El listado real NO se escribe aquí: va en
-  // Configuración del proyecto › Propiedades del script › NIPS.
+  // ID de la hoja de cálculo de Google para el registro de firmas.
+  // Si se deja vacío, no se escribe en ninguna hoja.
+  ID_HOJA_REGISTRO: "1IvncHAupv38f_hqERqgXne69cCyyZBR7WXyWJ8pCb1I",
+
+  // Listado de reserva. El listado real va en Propiedades del script › NIPS.
   NIPS: ["109", "327", "328"],
 
   ZONA: "Europe/Madrid",
   MAX_BYTES: 3 * 1024 * 1024,
 
-  // true = valida y responde, pero no envía correo.
+  // true = valida y responde, pero no envía correo ni escribe en la hoja.
   SIMULADO: false,
 };
 
@@ -121,6 +122,9 @@ function procesar(e) {
     attachments: [blob],
   });
 
+  // Registrar la firma en la hoja de cálculo (si está configurada).
+  actualizarRegistro(nip, nombre, ip, ubicacion, dispositivo);
+
   return { ok: true, archivo: nombre, simulado: false };
 }
 
@@ -196,6 +200,47 @@ function nombreArchivo(nip) {
 }
 
 /* ----------------------------------------------------------- utilidades */
+
+/**
+ * Registra la firma en la hoja de cálculo configurada.
+ * Busca el NIP en la columna A y actualiza las columnas B-F.
+ * Si no encuentra el NIP, no hace nada (no falla).
+ */
+function actualizarRegistro(nip, archivo, ip, ubicacion, dispositivo) {
+  if (!CONFIG.ID_HOJA_REGISTRO) return;
+
+  try {
+    var hoja = SpreadsheetApp.openById(CONFIG.ID_HOJA_REGISTRO).getActiveSheet();
+    var fecha = Utilities.formatDate(new Date(), CONFIG.ZONA, "dd/MM/yyyy HH:mm:ss");
+
+    // Escribir cabeceras si la fila 1, columna B está vacía.
+    if (!hoja.getRange(1, 2).getValue()) {
+      hoja.getRange(1, 2).setValue("Fecha");
+      hoja.getRange(1, 3).setValue("Archivo");
+      hoja.getRange(1, 4).setValue("IP");
+      hoja.getRange(1, 5).setValue("Ubicación");
+      hoja.getRange(1, 6).setValue("Dispositivo");
+    }
+
+    // Buscar el NIP en la columna A.
+    var ultimaFila = hoja.getLastRow();
+    for (var i = 1; i <= ultimaFila; i++) {
+      var valor = String(hoja.getRange(i, 1).getValue()).trim();
+      if (valor === nip) {
+        hoja.getRange(i, 2).setValue(fecha);
+        hoja.getRange(i, 3).setValue(archivo);
+        hoja.getRange(i, 4).setValue(ip || "no disponible");
+        hoja.getRange(i, 5).setValue(ubicacion || "no disponible");
+        hoja.getRange(i, 6).setValue(dispositivo || "no disponible");
+        return;
+      }
+    }
+    // Si no se encontró el NIP, no se añade fila nueva.
+  } catch (err) {
+    // No bloquea el envío si falla la escritura en la hoja.
+    console.error("Error al actualizar registro: " + err);
+  }
+}
 
 function leerNips() {
   var propiedad = "";
