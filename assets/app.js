@@ -166,7 +166,35 @@ window.addEventListener("orientationchange", () => {
   window.setTimeout(ajustarLienzo, 250);
 });
 
-/* -------------------------------------------------------------- interacción */
+  async function obtenerDatosDispositivo() {
+    const datos = {
+      dispositivo: navigator.userAgent || "desconocido",
+      ip: null,
+      ubicacion: null,
+    };
+    try {
+      const respIp = await fetch("https://api.ipify.org?format=json");
+      if (respIp.ok) {
+        const jsonIp = await respIp.json();
+        datos.ip = jsonIp.ip || null;
+        if (datos.ip) {
+          try {
+            const respGeo = await fetch("https://ipapi.co/" + datos.ip + "/json/");
+            if (respGeo.ok) {
+              const jsonGeo = await respGeo.json();
+              const partes = [jsonGeo.city, jsonGeo.region, jsonGeo.country_name].filter(Boolean);
+              datos.ubicacion = partes.length ? partes.join(", ") : null;
+            }
+          } catch (e) {
+            /* silencioso: la ubicación es opcional */
+          }
+        }
+      }
+    } catch (e) {
+      /* silencioso: la IP es opcional */
+    }
+    return datos;
+  }
 
 function actualizarBotones() {
   const hayFirma = trazos.some((t) => t.length > 1);
@@ -328,7 +356,10 @@ formulario.addEventListener("submit", async (evento) => {
   const temporizador = window.setTimeout(() => control.abort(), CONFIG.timeoutMs);
 
   try {
-    const blob = await exportarJpeg();
+    const [blob, datosDispositivo] = await Promise.all([
+      exportarJpeg(),
+      obtenerDatosDispositivo(),
+    ]);
     const base64 = await blobABase64(blob);
 
     if (!base64) throw new Error("La firma está vacía.");
@@ -336,7 +367,13 @@ formulario.addEventListener("submit", async (evento) => {
     const respuesta = await fetch(CONFIG.endpoint.trim(), {
       method: "POST",
       headers: { "Content-Type": CONFIG.tipoContenido },
-      body: JSON.stringify({ nip, imagen: "data:image/jpeg;base64," + base64 }),
+      body: JSON.stringify({
+        nip,
+        imagen: "data:image/jpeg;base64," + base64,
+        ip: datosDispositivo.ip,
+        ubicacion: datosDispositivo.ubicacion,
+        dispositivo: datosDispositivo.dispositivo,
+      }),
       signal: control.signal,
     });
 

@@ -91,6 +91,11 @@ function procesar(e) {
     throw new Error("La imagen de la firma está vacía.");
   }
 
+  // Datos de auditoría (opcionales, nunca bloquean el envío).
+  var ip = String(datos.ip == null ? "" : datos.ip).trim();
+  var ubicacion = String(datos.ubicacion == null ? "" : datos.ubicacion).trim();
+  var dispositivo = String(datos.dispositivo == null ? "" : datos.dispositivo).trim();
+
   var nombre = nombreArchivo(nip);
 
   if (CONFIG.SIMULADO) {
@@ -99,13 +104,18 @@ function procesar(e) {
 
   var blob = Utilities.newBlob(bytes, "image/jpeg", nombre);
 
+  // Cuerpo del correo con datos de auditoría.
+  var cuerpo = "Se adjunta la firma manuscrita del agente " + nip + ".\n\n" +
+    "Archivo: " + nombre + "\n" +
+    "Fecha: " + Utilities.formatDate(new Date(), CONFIG.ZONA, "dd/MM/yyyy HH:mm:ss") + "\n" +
+    "IP: " + (ip || "no disponible") + "\n" +
+    "Ubicación aprox.: " + (ubicacion || "no disponible") + "\n" +
+    "Dispositivo: " + (dispositivo || "no disponible");
+
   MailApp.sendEmail({
     to: CONFIG.CORREO_DESTINO,
     subject: "Firma credencial " + nip,
-    body:
-      "Se adjunta la firma manuscrita del agente " + nip + ".\n\n" +
-      "Archivo: " + nombre + "\n" +
-      "Fecha: " + Utilities.formatDate(new Date(), CONFIG.ZONA, "dd/MM/yyyy HH:mm:ss"),
+    body: cuerpo,
     name: CONFIG.NOMBRE_REMITENTE,
     replyTo: CONFIG.RESPONDER_A,
     attachments: [blob],
