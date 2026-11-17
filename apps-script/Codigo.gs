@@ -203,7 +203,7 @@ function nombreArchivo(nip) {
 
 /**
  * Registra la firma en la hoja de cálculo configurada.
- * Busca el NIP en la columna A y actualiza las columnas B-F.
+ * Busca el NIP en la columna A y actualiza las columnas B-G.
  * Si no encuentra el NIP, no hace nada (no falla).
  */
 function actualizarRegistro(nip, archivo, ip, ubicacion, dispositivo) {
@@ -213,13 +213,22 @@ function actualizarRegistro(nip, archivo, ip, ubicacion, dispositivo) {
     var hoja = SpreadsheetApp.openById(CONFIG.ID_HOJA_REGISTRO).getActiveSheet();
     var fecha = Utilities.formatDate(new Date(), CONFIG.ZONA, "dd/MM/yyyy HH:mm:ss");
 
+    // Leer cuántas veces ha firmado este agente.
+    var contador = 0;
+    try {
+      contador = parseInt(PropertiesService.getScriptProperties().getProperty("firma_" + nip) || "0", 10) || 0;
+    } catch (e) {
+      contador = 0;
+    }
+
     // Escribir cabeceras si la fila 1, columna B está vacía.
     if (!hoja.getRange(1, 2).getValue()) {
-      hoja.getRange(1, 2).setValue("Fecha");
-      hoja.getRange(1, 3).setValue("Archivo");
-      hoja.getRange(1, 4).setValue("IP");
-      hoja.getRange(1, 5).setValue("Ubicación");
-      hoja.getRange(1, 6).setValue("Dispositivo");
+      hoja.getRange(1, 2).setValue("Veces");
+      hoja.getRange(1, 3).setValue("Fecha");
+      hoja.getRange(1, 4).setValue("Archivo");
+      hoja.getRange(1, 5).setValue("IP");
+      hoja.getRange(1, 6).setValue("Ubicación");
+      hoja.getRange(1, 7).setValue("Dispositivo");
     }
 
     // Buscar el NIP en la columna A.
@@ -227,11 +236,12 @@ function actualizarRegistro(nip, archivo, ip, ubicacion, dispositivo) {
     for (var i = 1; i <= ultimaFila; i++) {
       var valor = String(hoja.getRange(i, 1).getValue()).trim();
       if (valor === nip) {
-        hoja.getRange(i, 2).setValue(fecha);
-        hoja.getRange(i, 3).setValue(archivo);
-        hoja.getRange(i, 4).setValue(ip || "no disponible");
-        hoja.getRange(i, 5).setValue(ubicacion || "no disponible");
-        hoja.getRange(i, 6).setValue(dispositivo || "no disponible");
+        hoja.getRange(i, 2).setValue(contador);
+        hoja.getRange(i, 3).setValue(fecha);
+        hoja.getRange(i, 4).setValue(archivo);
+        hoja.getRange(i, 5).setValue(ip || "no disponible");
+        hoja.getRange(i, 6).setValue(ubicacion || "no disponible");
+        hoja.getRange(i, 7).setValue(dispositivo || "no disponible");
         return;
       }
     }
